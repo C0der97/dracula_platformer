@@ -210,38 +210,33 @@ class Player {
             ctx.scale(-1, 1);
         }
 
-        // Draw sprite if loaded, otherwise draw simple shapes
-        if (images.dracula && images.dracula.complete) {
-            ctx.drawImage(images.dracula, 0, 0, this.width, this.height);
-        } else {
-            // Fallback: Draw Dracula with simple shapes
-            // Cape
-            ctx.fillStyle = '#2c0000';
-            ctx.fillRect(-5, 5, this.width + 10, this.height - 5);
+        // Draw Dracula with geometric shapes
+        // Cape
+        ctx.fillStyle = '#2c0000';
+        ctx.fillRect(-5, 5, this.width + 10, this.height - 5);
 
-            // Body
-            ctx.fillStyle = '#000';
-            ctx.fillRect(5, 15, this.width - 10, this.height - 20);
+        // Body
+        ctx.fillStyle = '#000';
+        ctx.fillRect(5, 15, this.width - 10, this.height - 20);
 
-            // Head
-            ctx.fillStyle = '#f0e6d2';
-            ctx.fillRect(10, 0, this.width - 20, 20);
+        // Head
+        ctx.fillStyle = '#f0e6d2';
+        ctx.fillRect(10, 0, this.width - 20, 20);
 
-            // Eyes
-            ctx.fillStyle = '#ff0000';
-            ctx.fillRect(15, 8, 4, 4);
-            ctx.fillRect(this.width - 19, 8, 4, 4);
+        // Eyes
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(15, 8, 4, 4);
+        ctx.fillRect(this.width - 19, 8, 4, 4);
 
-            // Fangs
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(17, 15, 3, 5);
-            ctx.fillRect(this.width - 20, 15, 3, 5);
+        // Fangs
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(17, 15, 3, 5);
+        ctx.fillRect(this.width - 20, 15, 3, 5);
 
-            // Cape collar
-            ctx.fillStyle = '#8b0000';
-            ctx.fillRect(0, 18, 8, 12);
-            ctx.fillRect(this.width - 8, 18, 8, 12);
-        }
+        // Cape collar
+        ctx.fillStyle = '#8b0000';
+        ctx.fillRect(0, 18, 8, 12);
+        ctx.fillRect(this.width - 8, 18, 8, 12);
 
         ctx.restore();
     }
@@ -360,48 +355,41 @@ class Enemy {
             ctx.scale(-1, 1);
         }
 
-        // Draw sprite if loaded, otherwise draw simple shapes
-        const spriteImage = this.type === 'cat' ? images.cat : images.dog;
-
-        if (spriteImage && spriteImage.complete) {
-            ctx.drawImage(spriteImage, 0, 0, this.width, this.height);
+        // Draw with geometric shapes
+        if (this.type === 'cat') {
+            // Cat Enemy
+            ctx.fillStyle = '#ff8800';
+            // Body
+            ctx.fillRect(5, 10, this.width - 10, this.height - 15);
+            // Head
+            ctx.fillRect(this.width - 20, 5, 15, 15);
+            // Ears
+            ctx.fillRect(this.width - 18, 0, 5, 8);
+            ctx.fillRect(this.width - 10, 0, 5, 8);
+            // Legs
+            ctx.fillRect(8, this.height - 10, 5, 10);
+            ctx.fillRect(18, this.height - 10, 5, 10);
+            // Eyes
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(this.width - 17, 8, 3, 3);
+            ctx.fillRect(this.width - 10, 8, 3, 3);
         } else {
-            // Fallback: Draw with simple shapes
-            if (this.type === 'cat') {
-                // Cat Enemy
-                ctx.fillStyle = '#ff8800';
-                // Body
-                ctx.fillRect(5, 10, this.width - 10, this.height - 15);
-                // Head
-                ctx.fillRect(this.width - 20, 5, 15, 15);
-                // Ears
-                ctx.fillRect(this.width - 18, 0, 5, 8);
-                ctx.fillRect(this.width - 10, 0, 5, 8);
-                // Legs
-                ctx.fillRect(8, this.height - 10, 5, 10);
-                ctx.fillRect(18, this.height - 10, 5, 10);
-                // Eyes
-                ctx.fillStyle = '#00ff00';
-                ctx.fillRect(this.width - 17, 8, 3, 3);
-                ctx.fillRect(this.width - 10, 8, 3, 3);
-            } else {
-                // Dog Enemy
-                ctx.fillStyle = '#8b4513';
-                // Body
-                ctx.fillRect(5, 12, this.width - 10, this.height - 17);
-                // Head
-                ctx.fillRect(this.width - 22, 7, 18, 18);
-                // Ears (floppy)
-                ctx.fillRect(this.width - 20, 15, 4, 12);
-                ctx.fillRect(this.width - 10, 15, 4, 12);
-                // Legs
-                ctx.fillRect(8, this.height - 12, 6, 12);
-                ctx.fillRect(20, this.height - 12, 6, 12);
-                // Eyes
-                ctx.fillStyle = '#000';
-                ctx.fillRect(this.width - 18, 12, 3, 3);
-                ctx.fillRect(this.width - 10, 12, 3, 3);
-            }
+            // Dog Enemy
+            ctx.fillStyle = '#8b4513';
+            // Body
+            ctx.fillRect(5, 12, this.width - 10, this.height - 17);
+            // Head
+            ctx.fillRect(this.width - 22, 7, 18, 18);
+            // Ears (floppy)
+            ctx.fillRect(this.width - 20, 15, 4, 12);
+            ctx.fillRect(this.width - 10, 15, 4, 12);
+            // Legs
+            ctx.fillRect(8, this.height - 12, 6, 12);
+            ctx.fillRect(20, this.height - 12, 6, 12);
+            // Eyes
+            ctx.fillStyle = '#000';
+            ctx.fillRect(this.width - 18, 12, 3, 3);
+            ctx.fillRect(this.width - 10, 12, 3, 3);
         }
 
         ctx.restore();
