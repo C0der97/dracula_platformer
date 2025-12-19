@@ -226,11 +226,112 @@ let player;
 let platforms = [];
 let enemies = [];
 let particles = [];
+let collectibles = [];
+let currentLevel = 0;
 
 // Timing
 let lastTime = 0;
 const FPS = 60;
 const frameDelay = 1000 / FPS;
+
+// ============================================
+// LEVEL DATA STRUCTURE
+// ============================================
+const levels = [
+    // Level 1: Entrance
+    {
+        id: 1,
+        name: "Entrada del Castillo",
+        platforms: [
+            { x: 200, y: 450, width: 150 },
+            { x: 400, y: 380, width: 120 },
+            { x: 600, y: 320, width: 150 },
+            { x: 800, y: 400, width: 180 },
+        ],
+        movingPlatforms: [
+            { x: 150, y: 280, width: 100, endX: 350, endY: 280, speed: 2 }
+        ],
+        enemies: [
+            { x: 300, y: 200, type: 'cat' },
+            { x: 500, y: 200, type: 'dog' },
+            { x: 850, y: 200, type: 'cat' },
+        ],
+        collectibles: [
+            { x: 250, y: 400, type: 'coin' },
+            { x: 450, y: 330, type: 'coin' },
+            { x: 650, y: 270, type: 'coin' },
+            { x: 700, y: 150, type: 'heart' },
+        ]
+    },
+    // Level 2: Garden
+    {
+        id: 2,
+        name: "Jardín Gótico",
+        platforms: [
+            { x: 100, y: 480, width: 150 },
+            { x: 300, y: 420, width: 100 },
+            { x: 500, y: 360, width: 120 },
+            { x: 700, y: 300, width: 150 },
+            { x: 200, y: 240, width: 100 },
+            { x: 450, y: 180, width: 130 },
+        ],
+        movingPlatforms: [
+            { x: 600, y: 450, width: 100, endX: 800, endY: 450, speed: 3 },
+            { x: 350, y: 300, width: 80, endX: 350, endY: 200, speed: 2 }
+        ],
+        enemies: [
+            { x: 350, y: 200, type: 'cat' },
+            { x: 550, y: 200, type: 'dog' },
+            { x: 750, y: 150, type: 'cat' },
+            { x: 400, y: 250, type: 'bat' },
+            { x: 650, y: 200, type: 'bat' },
+        ],
+        collectibles: [
+            { x: 350, y: 390, type: 'coin' },
+            { x: 550, y: 330, type: 'coin' },
+            { x: 750, y: 270, type: 'coin' },
+            { x: 250, y: 210, type: 'coin' },
+            { x: 500, y: 150, type: 'star' },
+            { x: 150, y: 450, type: 'heart' },
+        ]
+    },
+    // Level 3: Castle Towers
+    {
+        id: 3,
+        name: "Torres del Castillo",
+        platforms: [
+            { x: 50, y: 490, width: 120 },
+            { x: 250, y: 440, width: 100 },
+            { x: 450, y: 380, width: 120 },
+            { x: 650, y: 320, width: 100 },
+            { x: 850, y: 260, width: 130 },
+            { x: 300, y: 220, width: 110 },
+            { x: 550, y: 160, width: 100 },
+        ],
+        movingPlatforms: [
+            { x: 100, y: 350, width: 90, endX: 200, endY: 350, speed: 2.5 },
+            { x: 500, y: 280, width: 90, endX: 600, endY: 280, speed: 3 },
+            { x: 700, y: 420, width: 80, endX: 700, endY: 320, speed: 2 }
+        ],
+        enemies: [
+            { x: 300, y: 200, type: 'dog' },
+            { x: 500, y: 150, type: 'dog' },
+            { x: 700, y: 200, type: 'cat' },
+            { x: 200, y: 300, type: 'bat' },
+            { x: 500, y: 250, type: 'bat' },
+            { x: 750, y: 200, type: 'bat' },
+        ],
+        collectibles: [
+            { x: 100, y: 460, type: 'coin' },
+            { x: 300, y: 410, type: 'coin' },
+            { x: 500, y: 350, type: 'coin' },
+            { x: 700, y: 290, type: 'coin' },
+            { x: 900, y: 230, type: 'coin' },
+            { x: 600, y: 130, type: 'star' },
+            { x: 350, y: 190, type: 'heart' },
+        ]
+    }
+];
 
 // ============================================
 // PLAYER CLASS
@@ -397,186 +498,6 @@ class Player {
 }
 
 // ============================================
-// ENEMY CLASS
-// ============================================
-class Enemy {
-    constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.type = type; // 'cat' or 'dog'
-        this.width = ENEMY_WIDTH;
-        this.height = ENEMY_HEIGHT;
-        this.velocityX = type === 'cat' ? 2 : 3;
-        this.velocityY = 0;
-        this.direction = 1;
-        this.alive = true;
-        this.animFrame = 0;
-        this.animTimer = 0;
-    }
-
-    update(deltaTime) {
-        if (!this.alive) return;
-
-        // Movement
-        this.x += this.velocityX * this.direction;
-
-        // Apply Gravity
-        this.velocityY += GRAVITY;
-        this.y += this.velocityY;
-
-        // Floor Collision
-        if (this.y + this.height >= FLOOR_Y) {
-            this.y = FLOOR_Y - this.height;
-            this.velocityY = 0;
-        }
-
-        // Platform Collision
-        platforms.forEach(platform => {
-            if (this.checkCollision(platform)) {
-                if (this.velocityY > 0 && this.y + this.height - this.velocityY <= platform.y) {
-                    this.y = platform.y - this.height;
-                    this.velocityY = 0;
-                }
-            }
-        });
-
-        // Turn around at edges
-        if (this.x < 0 || this.x > canvas.width - this.width) {
-            this.direction *= -1;
-        }
-
-        // Turn around at platform edges
-        let onPlatform = false;
-        platforms.forEach(platform => {
-            if (this.y + this.height === platform.y &&
-                this.x + this.width > platform.x &&
-                this.x < platform.x + platform.width) {
-                onPlatform = true;
-
-                // Check if near edge
-                if (this.direction === 1 && this.x + this.width > platform.x + platform.width - 10) {
-                    this.direction = -1;
-                } else if (this.direction === -1 && this.x < platform.x + 10) {
-                    this.direction = 1;
-                }
-            }
-        });
-
-        // Animation
-        this.animTimer += deltaTime;
-        if (this.animTimer > 150) {
-            this.animFrame = (this.animFrame + 1) % 2;
-            this.animTimer = 0;
-        }
-
-        // Check collision with player
-        if (this.checkCollision(player)) {
-            // Check if player jumped on top
-            if (player.velocityY > 0 && player.y + player.height - player.velocityY < this.y + this.height / 2) {
-                this.die();
-                player.velocityY = JUMP_FORCE * 0.5;
-                score += this.type === 'cat' ? 100 : 200;
-                updateHUD();
-            } else {
-                player.takeDamage();
-            }
-        }
-    }
-
-    checkCollision(obj) {
-        return this.x < obj.x + obj.width &&
-            this.x + this.width > obj.x &&
-            this.y < obj.y + obj.height &&
-            this.y + this.height > obj.y;
-    }
-
-    die() {
-        this.alive = false;
-        createParticles(this.x + this.width / 2, this.y + this.height / 2, this.type === 'cat' ? '#ff8800' : '#8b4513');
-        playDefeatSound();
-    }
-
-    draw() {
-        if (!this.alive) return;
-
-        ctx.save();
-
-        // Translate to enemy position
-        ctx.translate(this.x, this.y);
-
-        // Flip sprite if moving left
-        if (this.direction === -1) {
-            ctx.translate(this.width, 0);
-            ctx.scale(-1, 1);
-        }
-
-        // Draw with geometric shapes
-        if (this.type === 'cat') {
-            // Cat Enemy
-            ctx.fillStyle = '#ff8800';
-            // Body
-            ctx.fillRect(5, 10, this.width - 10, this.height - 15);
-            // Head
-            ctx.fillRect(this.width - 20, 5, 15, 15);
-            // Ears
-            ctx.fillRect(this.width - 18, 0, 5, 8);
-            ctx.fillRect(this.width - 10, 0, 5, 8);
-            // Legs
-            ctx.fillRect(8, this.height - 10, 5, 10);
-            ctx.fillRect(18, this.height - 10, 5, 10);
-            // Eyes
-            ctx.fillStyle = '#00ff00';
-            ctx.fillRect(this.width - 17, 8, 3, 3);
-            ctx.fillRect(this.width - 10, 8, 3, 3);
-        } else {
-            // Dog Enemy
-            ctx.fillStyle = '#8b4513';
-            // Body
-            ctx.fillRect(5, 12, this.width - 10, this.height - 17);
-            // Head
-            ctx.fillRect(this.width - 22, 7, 18, 18);
-            // Ears (floppy)
-            ctx.fillRect(this.width - 20, 15, 4, 12);
-            ctx.fillRect(this.width - 10, 15, 4, 12);
-            // Legs
-            ctx.fillRect(8, this.height - 12, 6, 12);
-            ctx.fillRect(20, this.height - 12, 6, 12);
-            // Eyes
-            ctx.fillStyle = '#000';
-            ctx.fillRect(this.width - 18, 12, 3, 3);
-            ctx.fillRect(this.width - 10, 12, 3, 3);
-        }
-
-        ctx.restore();
-    }
-}
-
-// ============================================
-// PLATFORM CLASS
-// ============================================
-class Platform {
-    constructor(x, y, width) {
-        this.x = x;
-        this.y = y;
-        this.width = width;
-        this.height = PLATFORM_HEIGHT;
-    }
-
-    draw() {
-        ctx.fillStyle = '#4a4a4a';
-        ctx.fillRect(this.x, this.y, this.width, this.height);
-
-        // Top edge highlight
-        ctx.fillStyle = '#6a6a6a';
-        ctx.fillRect(this.x, this.y, this.width, 4);
-
-        // Bottom shadow
-        ctx.fillStyle = '#2a2a2a';
-        ctx.fillRect(this.x, this.y + this.height - 4, this.width, 4);
-    }
-}
-
-// ============================================
 // PARTICLE SYSTEM
 // ============================================
 class Particle {
@@ -619,37 +540,59 @@ function initGame() {
     canvas.width = 1000;
     canvas.height = 600;
 
-    // Create Player
-    player = new Player(100, 300);
-
-    // Create Platforms
-    platforms = [
-        new Platform(200, 450, 150),
-        new Platform(400, 380, 120),
-        new Platform(600, 320, 150),
-        new Platform(150, 280, 100),
-        new Platform(800, 400, 180),
-        new Platform(350, 200, 130),
-        new Platform(700, 180, 120),
-    ];
-
-    // Create Enemies
-    enemies = [
-        new Enemy(300, 200, 'cat'),
-        new Enemy(500, 200, 'dog'),
-        new Enemy(700, 150, 'cat'),
-        new Enemy(850, 200, 'cat'),
-        new Enemy(200, 200, 'dog'),
-        new Enemy(600, 200, 'cat'),
-    ];
-
-    // Reset Game State
-    score = 0;
-    lives = 3;
-    gameTime = 0;
-    particles = [];
+    // Load current level
+    loadLevel(currentLevel);
 
     updateHUD();
+}
+
+function loadLevel(levelIndex) {
+    if (levelIndex >= levels.length) {
+        gameComplete();
+        return;
+    }
+
+    const level = levels[levelIndex];
+
+    // Create Player at start position
+    player = new Player(100, 300);
+
+    // Clear arrays
+    platforms = [];
+    enemies = [];
+    collectibles = [];
+    particles = [];
+
+    // Create Platforms from level data
+    level.platforms.forEach(p => {
+        platforms.push(new Platform(p.x, p.y, p.width));
+    });
+
+    // Create Moving Platforms
+    if (level.movingPlatforms) {
+        level.movingPlatforms.forEach(mp => {
+            platforms.push(new MovingPlatform(mp.x, mp.y, mp.width, mp.endX, mp.endY, mp.speed));
+        });
+    }
+
+    // Create Enemies
+    level.enemies.forEach(e => {
+        if (e.type === 'bat') {
+            enemies.push(new Bat(e.x, e.y));
+        } else {
+            enemies.push(new Enemy(e.x, e.y, e.type));
+        }
+    });
+
+    // Create Collectibles
+    if (level.collectibles) {
+        level.collectibles.forEach(c => {
+            collectibles.push(new Collectible(c.x, c.y, c.type));
+        });
+    }
+
+    // Reset particles
+    particles = [];
 }
 
 function updateHUD() {
@@ -670,14 +613,22 @@ function update(deltaTime) {
     // Update Enemies
     enemies.forEach(enemy => enemy.update(deltaTime));
 
+    // Update Collectibles
+    collectibles.forEach(collectible => collectible.update(deltaTime));
+
+    // Update Moving Platforms
+    platforms.forEach(platform => {
+        if (platform.update) platform.update(deltaTime);
+    });
+
     // Update Particles
     particles = particles.filter(p => p.life > 0);
     particles.forEach(p => p.update());
 
-    // Check Win Condition
+    // Check Level Complete Condition
     const aliveEnemies = enemies.filter(e => e.alive).length;
     if (aliveEnemies === 0) {
-        victory();
+        nextLevel();
     }
 
     updateHUD();
@@ -718,6 +669,9 @@ function draw() {
     ctx.fillStyle = '#3a3a3a';
     ctx.fillRect(0, FLOOR_Y, canvas.width, 5);
 
+    // Draw Collectibles
+    collectibles.forEach(collectible => collectible.draw());
+
     // Draw Enemies
     enemies.forEach(enemy => enemy.draw());
 
@@ -726,6 +680,13 @@ function draw() {
 
     // Draw Particles
     particles.forEach(p => p.draw());
+
+    // Draw Level Name
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(`Nivel ${currentLevel + 1}: ${levels[currentLevel].name}`, canvas.width / 2, 30);
+    ctx.textAlign = 'left';
 }
 
 function gameLoop(currentTime) {
@@ -743,12 +704,43 @@ function gameLoop(currentTime) {
 }
 
 function startGame() {
+    // Reset game state
+    currentLevel = 0;
+    score = 0;
+    lives = 3;
+    gameTime = 0;
+
     initGame();
     gameState = 'playing';
     showScreen('game-screen');
     lastTime = performance.now();
     startBackgroundMusic();
     gameLoop(lastTime);
+}
+
+function nextLevel() {
+    currentLevel++;
+
+    if (currentLevel >= levels.length) {
+        gameComplete();
+    } else {
+        gameState = 'paused';
+        playVictorySound();
+
+        // Show transition message
+        setTimeout(() => {
+            loadLevel(currentLevel);
+            gameState = 'playing';
+        }, 2000);
+    }
+}
+
+function gameComplete() {
+    gameState = 'victory';
+    document.getElementById('victory-score').textContent = score;
+    showScreen('victory-screen');
+    stopBackgroundMusic();
+    playVictorySound();
 }
 
 function pauseGame() {
