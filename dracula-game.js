@@ -61,6 +61,158 @@ function loadImages() {
 // Call image loading immediately
 loadImages();
 
+// Load Background Music Audio
+const backgroundMusic = new Audio('src/sounds/soundenv.mp3');
+backgroundMusic.loop = true;
+backgroundMusic.volume = 0.3; // 30% volume
+
+// ============================================
+// SOUND SYSTEM (Web Audio API)
+// ============================================
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let backgroundMusicGain = null;
+let musicOscillator = null;
+let soundEnabled = true;
+
+// Create a simple oscillator-based sound
+function playSound(frequency, duration, type = 'square', volume = 0.3) {
+    if (!soundEnabled) return;
+
+    try {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.type = type; // 'sine', 'square', 'sawtooth', 'triangle'
+        oscillator.frequency.value = frequency;
+
+        gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + duration);
+    } catch (e) {
+        console.error('Sound error:', e);
+    }
+}
+
+// Jump sound - ascending beep
+function playJumpSound() {
+    if (!soundEnabled) return;
+
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(200, audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(600, audioContext.currentTime + 0.1);
+
+    gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+    osc.start(audioContext.currentTime);
+    osc.stop(audioContext.currentTime + 0.1);
+}
+
+// Enemy defeat sound - explosion
+function playDefeatSound() {
+    if (!soundEnabled) return;
+
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(400, audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(50, audioContext.currentTime + 0.2);
+
+    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+
+    osc.start(audioContext.currentTime);
+    osc.stop(audioContext.currentTime + 0.2);
+}
+
+// Damage sound - descending beep
+function playDamageSound() {
+    if (!soundEnabled) return;
+
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(600, audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.3);
+
+    gain.gain.setValueAtTime(0.25, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+
+    osc.start(audioContext.currentTime);
+    osc.stop(audioContext.currentTime + 0.3);
+}
+
+// Victory sound - ascending melody
+function playVictorySound() {
+    if (!soundEnabled) return;
+
+    const notes = [262, 330, 392, 523]; // C, E, G, C
+    notes.forEach((freq, i) => {
+        setTimeout(() => playSound(freq, 0.2, 'sine', 0.3), i * 150);
+    });
+}
+
+// Game Over sound - descending melody
+function playGameOverSound() {
+    if (!soundEnabled) return;
+
+    const notes = [392, 330, 262, 196]; // G, E, C, G
+    notes.forEach((freq, i) => {
+        setTimeout(() => playSound(freq, 0.3, 'triangle', 0.25), i * 200);
+    });
+}
+
+// Background music - play MP3 file
+function startBackgroundMusic() {
+    if (!soundEnabled) return;
+
+    try {
+        backgroundMusic.currentTime = 0; // Start from beginning
+        backgroundMusic.play().catch(e => {
+            console.log('Background music autoplay blocked:', e);
+        });
+    } catch (e) {
+        console.error('Background music error:', e);
+    }
+}
+
+function stopBackgroundMusic() {
+    try {
+        backgroundMusic.pause();
+        backgroundMusic.currentTime = 0;
+    } catch (e) {
+        console.error('Stop music error:', e);
+    }
+}
+
+// Toggle sound on/off
+function toggleSound() {
+    soundEnabled = !soundEnabled;
+    if (!soundEnabled) {
+        stopBackgroundMusic();
+    }
+    return soundEnabled;
+}
+
 // Game State
 let gameState = 'start'; // start, playing, paused, gameover, victory
 let score = 0;
@@ -113,10 +265,11 @@ class Player {
         }
 
         // Jump
-        if (keys[' '] && this.onGround) {
+        if (keys['ArrowUp'] && this.onGround) {
             this.velocityY = JUMP_FORCE;
             this.jumping = true;
             this.onGround = false;
+            playJumpSound();
         }
 
         // Apply Gravity
@@ -186,6 +339,7 @@ class Player {
             updateHUD();
             this.invincible = true;
             this.invincibleTime = 2000;
+            playDamageSound();
 
             if (lives <= 0) {
                 gameOver();
@@ -339,6 +493,7 @@ class Enemy {
     die() {
         this.alive = false;
         createParticles(this.x + this.width / 2, this.y + this.height / 2, this.type === 'cat' ? '#ff8800' : '#8b4513');
+        playDefeatSound();
     }
 
     draw() {
@@ -592,6 +747,7 @@ function startGame() {
     gameState = 'playing';
     showScreen('game-screen');
     lastTime = performance.now();
+    startBackgroundMusic();
     gameLoop(lastTime);
 }
 
@@ -611,12 +767,16 @@ function gameOver() {
     gameState = 'gameover';
     document.getElementById('final-score').textContent = score;
     showScreen('gameover-screen');
+    stopBackgroundMusic();
+    playGameOverSound();
 }
 
 function victory() {
     gameState = 'victory';
     document.getElementById('victory-score').textContent = score;
     showScreen('victory-screen');
+    stopBackgroundMusic();
+    playVictorySound();
 }
 
 function showScreen(screenId) {
