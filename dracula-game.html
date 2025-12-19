@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drácula's Revenge - Platform Game</title>
+    <link rel="stylesheet" href="dracula-game.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Start Screen -->
+        <div id="start-screen" class="screen active">
+            <div class="title-container">
+                <h1 class="game-title">DRÁCULA'S REVENGE</h1>
+                <p class="game-subtitle">Derrota a los Gatos y Perros que invaden tu castillo</p>
+            </div>
+            <button id="start-btn" class="game-btn">Comenzar Juego</button>
+            <div class="controls-info">
+                <h3>Controles:</h3>
+                <p>← → Flechas para mover | Espacio para saltar</p>
+                <p>Salta sobre los enemigos para derrotarlos</p>
+            </div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div id="hud">
+                <div class="hud-item">
+                    <span class="hud-label">Puntuación:</span>
+                    <span id="score">0</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Vidas:</span>
+                    <span id="lives">❤️❤️❤️</span>
+                </div>
+                <div class="hud-item">
+                    <span class="hud-label">Tiempo:</span>
+                    <span id="timer">0</span>
+                </div>
+            </div>
+            <canvas id="game-canvas"></canvas>
+            <button id="pause-btn" class="game-btn-small">Pausa</button>
+        </div>
+
+        <!-- Pause Screen -->
+        <div id="pause-screen" class="screen">
+            <h2>PAUSA</h2>
+            <button id="resume-btn" class="game-btn">Continuar</button>
+            <button id="restart-btn" class="game-btn">Reiniciar</button>
+            <button id="menu-btn" class="game-btn">Menú Principal</button>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameover-screen" class="screen">
+            <h2 class="result-title">¡GAME OVER!</h2>
+            <p class="result-message">Las mascotas te han derrotado...</p>
+            <div class="final-score">
+                <p>Puntuación Final: <span id="final-score">0</span></p>
+            </div>
+            <button id="restart-gameover-btn" class="game-btn">Jugar de Nuevo</button>
+            <button id="menu-gameover-btn" class="game-btn">Menú Principal</button>
+        </div>
+
+        <!-- Victory Screen -->
+        <div id="victory-screen" class="screen">
+            <h2 class="result-title">¡VICTORIA!</h2>
+            <p class="result-message">¡Has protegido tu castillo!</p>
+            <div class="final-score">
+                <p>Puntuación Final: <span id="victory-score">0</span></p>
+            </div>
+            <button id="restart-victory-btn" class="game-btn">Jugar de Nuevo</button>
+            <button id="menu-victory-btn" class="game-btn">Menú Principal</button>
+        </div>
+    </div>
+
+    <script src="dracula-game.js"></script>
+</body>
+</html>
