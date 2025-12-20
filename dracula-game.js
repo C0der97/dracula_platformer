@@ -749,6 +749,17 @@ function update(deltaTime) {
 }
 
 function draw() {
+    ctx.save();
+
+    // Apply screen shake
+    if (cameraShake > 0) {
+        const shakeX = (Math.random() - 0.5) * cameraShake;
+        const shakeY = (Math.random() - 0.5) * cameraShake;
+        ctx.translate(shakeX, shakeY);
+        cameraShake *= 0.9; // Decay
+        if (cameraShake < 0.1) cameraShake = 0;
+    }
+
     // Draw Background
     if (images.background && images.background.complete) {
         // Draw the background image scaled to canvas
@@ -804,6 +815,8 @@ function draw() {
     ctx.textAlign = 'center';
     ctx.fillText(`Nivel ${currentLevel + 1}: ${levels[currentLevel].name}`, canvas.width / 2, 30);
     ctx.textAlign = 'left';
+
+    ctx.restore(); // End screen shake
 }
 
 function gameLoop(currentTime) {
@@ -1041,4 +1054,13 @@ function updateCombo(deltaTime) {
             resetCombo();
         }
     }
+}
+
+// ============================================
+// SCREEN SHAKE SYSTEM
+// ============================================
+let cameraShake = 0;
+
+function screenShake(intensity) {
+    cameraShake = intensity;
 }
