@@ -461,3 +461,8 @@ body {
         right: 10px;
     }
 }
+.control-shoot {
+    bottom: 80px;
+    right: 120px;
+    font-size: 28px;
+}

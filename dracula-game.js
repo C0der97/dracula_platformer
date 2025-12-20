@@ -227,6 +227,7 @@ let platforms = [];
 let enemies = [];
 let particles = [];
 let collectibles = [];
+let projectiles = [];
 let currentLevel = 0;
 
 // Timing
@@ -330,6 +331,48 @@ const levels = [
             { x: 600, y: 130, type: 'star' },
             { x: 350, y: 190, type: 'heart' },
         ]
+    },
+    // Level 4: Dark Laboratory
+    {
+        id: 4,
+        name: "Laboratorio Oscuro",
+        platforms: [
+            { x: 100, y: 490, width: 100 },
+            { x: 300, y: 450, width: 80 },
+            { x: 500, y: 400, width: 90 },
+            { x: 700, y: 350, width: 100 },
+            { x: 200, y: 300, width: 80 },
+            { x: 450, y: 250, width: 100 },
+            { x: 650, y: 200, width: 80 },
+            { x: 300, y: 150, width: 90 },
+        ],
+        movingPlatforms: [
+            { x: 50, y: 380, width: 80, endX: 150, endY: 380, speed: 2 },
+            { x: 550, y: 320, width: 70, endX: 550, endY: 220, speed: 2.5 },
+            { x: 800, y: 450, width: 90, endX: 900, endY: 450, speed: 3 }
+        ],
+        enemies: [
+            { x: 350, y: 200, type: 'dog' },
+            { x: 550, y: 150, type: 'dog' },
+            { x: 250, y: 250, type: 'cat' },
+            { x: 700, y: 200, type: 'cat' },
+            { x: 150, y: 320, type: 'bat' },  // High bat - needs projectiles
+            { x: 450, y: 280, type: 'bat' },
+            { x: 650, y: 230, type: 'bat' },
+            { x: 850, y: 250, type: 'bat' },  // Far bat - needs projectiles
+            { x: 400, y: 180, type: 'cat' },
+            { x: 600, y: 150, type: 'dog' },
+        ],
+        collectibles: [
+            { x: 350, y: 420, type: 'coin' },
+            { x: 550, y: 370, type: 'coin' },
+            { x: 750, y: 320, type: 'coin' },
+            { x: 250, y: 270, type: 'coin' },
+            { x: 500, y: 220, type: 'coin' },
+            { x: 700, y: 170, type: 'coin' },
+            { x: 150, y: 460, type: 'heart' },
+            { x: 500, y: 140, type: 'star' },
+        ]
     }
 ];
 
@@ -351,6 +394,8 @@ class Player {
         this.direction = 1; // 1 = right, -1 = left
         this.animFrame = 0;
         this.animTimer = 0;
+        this.shootCooldown = 0;
+        this.shootCooldownTime = 500; // 0.5 seconds between shots
     }
 
     update(deltaTime) {
@@ -415,6 +460,11 @@ class Player {
             }
         }
 
+        // Shoot Cooldown
+        if (this.shootCooldown > 0) {
+            this.shootCooldown -= deltaTime;
+        }
+
         // Animation
         if (Math.abs(this.velocityX) > 0.5) {
             this.animTimer += deltaTime;
@@ -446,6 +496,22 @@ class Player {
                 gameOver();
             }
         }
+    }
+
+    shoot() {
+        if (this.shootCooldown > 0) return;
+
+        // Create projectile in front of player
+        const projectileX = this.direction === 1 ? this.x + this.width : this.x;
+        const projectileY = this.y + this.height / 2;
+
+        projectiles.push(new Projectile(projectileX, projectileY, this.direction));
+
+        // Set cooldown
+        this.shootCooldown = this.shootCooldownTime;
+
+        // Play shoot sound
+        playSound(400, 0.1, 'square', 0.15);
     }
 
     draw() {
@@ -616,6 +682,10 @@ function update(deltaTime) {
     // Update Collectibles
     collectibles.forEach(collectible => collectible.update(deltaTime));
 
+    // Update Projectiles
+    projectiles = projectiles.filter(p => p.active);
+    projectiles.forEach(projectile => projectile.update(deltaTime));
+
     // Update Moving Platforms
     platforms.forEach(platform => {
         if (platform.update) platform.update(deltaTime);
@@ -674,6 +744,9 @@ function draw() {
 
     // Draw Enemies
     enemies.forEach(enemy => enemy.draw());
+
+    // Draw Projectiles
+    projectiles.forEach(projectile => projectile.draw());
 
     // Draw Player
     player.draw();
@@ -788,6 +861,14 @@ function returnToMenu() {
 // ============================================
 document.addEventListener('keydown', (e) => {
     keys[e.key] = true;
+
+    // Shoot with X key
+    if (e.key === 'x' || e.key === 'X') {
+        if (player && gameState === 'playing') {
+            player.shoot();
+        }
+    }
+
     if (e.key === ' ') {
         e.preventDefault();
     }
@@ -820,10 +901,10 @@ showScreen('start-screen');
 function initMobileControls() {
     const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     const mobileControls = document.getElementById('mobile-controls');
-    
+
     if (isTouchDevice && mobileControls) {
         mobileControls.classList.add('visible');
-        
+
         // Left button
         const btnLeft = document.getElementById('btn-left');
         btnLeft.addEventListener('touchstart', (e) => {
@@ -834,7 +915,7 @@ function initMobileControls() {
             e.preventDefault();
             keys['ArrowLeft'] = false;
         });
-        
+
         // Right button
         const btnRight = document.getElementById('btn-right');
         btnRight.addEventListener('touchstart', (e) => {
@@ -845,7 +926,7 @@ function initMobileControls() {
             e.preventDefault();
             keys['ArrowRight'] = false;
         });
-        
+
         // Jump button
         const btnJump = document.getElementById('btn-jump');
         btnJump.addEventListener('touchstart', (e) => {
@@ -856,7 +937,7 @@ function initMobileControls() {
             e.preventDefault();
             keys['ArrowUp'] = false;
         });
-        
+
         // Prevent buttons from sticking
         [btnLeft, btnRight, btnJump].forEach(btn => {
             btn.addEventListener('touchcancel', (e) => {
@@ -871,3 +952,14 @@ function initMobileControls() {
 
 // Initialize mobile controls on load
 initMobileControls();
+
+// Add shoot button handler for mobile
+const btnShoot = document.getElementById('btn-shoot');
+if (btnShoot) {
+    btnShoot.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        if (player && gameState === 'playing') {
+            player.shoot();
+        }
+    });
+}

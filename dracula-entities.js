@@ -441,3 +441,77 @@ class Bat extends Enemy {
         ctx.restore();
     }
 }
+
+// ============================================
+// PROJECTILE CLASS (Blood Drops)
+// ============================================
+class Projectile {
+    constructor(x, y, direction) {
+        this.x = x;
+        this.y = y;
+        this.width = 8;
+        this.height = 8;
+        this.direction = direction; // 1 = right, -1 = left
+        this.speed = 10;
+        this.active = true;
+    }
+
+    update(deltaTime) {
+        if (!this.active) return;
+
+        // Move projectile
+        this.x += this.speed * this.direction;
+
+        // Check if out of bounds
+        if (this.x < 0 || this.x > canvas.width) {
+            this.active = false;
+            return;
+        }
+
+        // Check collision with enemies
+        enemies.forEach(enemy => {
+            if (!enemy.alive) return;
+            
+            if (this.checkCollision(enemy)) {
+                enemy.die();
+                this.active = false;
+                score += 150; // Bonus for projectile kill
+                updateHUD();
+                
+                // Create blood particles
+                createParticles(this.x, this.y, '#ff0000');
+            }
+        });
+    }
+
+    checkCollision(obj) {
+        return this.x < obj.x + obj.width &&
+               this.x + this.width > obj.x &&
+               this.y < obj.y + obj.height &&
+               this.y + this.height > obj.y;
+    }
+
+    draw() {
+        if (!this.active) return;
+
+        ctx.save();
+        
+        // Blood drop with glow effect
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ff0000';
+        
+        // Main drop
+        ctx.fillStyle = '#cc0000';
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Highlight
+        ctx.fillStyle = '#ff3333';
+        ctx.beginPath();
+        ctx.arc(this.x + this.width/2 - 1, this.y + this.height/2 - 1, this.width/4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.restore();
+    }
+}
