@@ -3,7 +3,10 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Drácula's Revenge - Platform Game</title>
     <link rel="stylesheet" href="dracula-game.css">
 </head>
@@ -42,6 +45,13 @@
             </div>
             <canvas id="game-canvas"></canvas>
             <button id="pause-btn" class="game-btn-small">Pausa</button>
+
+            <!-- Mobile Touch Controls -->
+            <div id="mobile-controls" class="mobile-controls">
+                <button id="btn-left" class="control-btn control-left">←</button>
+                <button id="btn-right" class="control-btn control-right">→</button>
+                <button id="btn-jump" class="control-btn control-jump">↑</button>
+            </div>
         </div>
 
         <!-- Pause Screen -->

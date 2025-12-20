@@ -812,3 +812,62 @@ document.getElementById('menu-victory-btn').addEventListener('click', returnToMe
 // INITIALIZE
 // ============================================
 showScreen('start-screen');
+
+// ============================================
+// MOBILE TOUCH CONTROLS
+// ============================================
+// Detect touch device and show controls
+function initMobileControls() {
+    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    const mobileControls = document.getElementById('mobile-controls');
+    
+    if (isTouchDevice && mobileControls) {
+        mobileControls.classList.add('visible');
+        
+        // Left button
+        const btnLeft = document.getElementById('btn-left');
+        btnLeft.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys['ArrowLeft'] = true;
+        });
+        btnLeft.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys['ArrowLeft'] = false;
+        });
+        
+        // Right button
+        const btnRight = document.getElementById('btn-right');
+        btnRight.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys['ArrowRight'] = true;
+        });
+        btnRight.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys['ArrowRight'] = false;
+        });
+        
+        // Jump button
+        const btnJump = document.getElementById('btn-jump');
+        btnJump.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            keys['ArrowUp'] = true;
+        });
+        btnJump.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            keys['ArrowUp'] = false;
+        });
+        
+        // Prevent buttons from sticking
+        [btnLeft, btnRight, btnJump].forEach(btn => {
+            btn.addEventListener('touchcancel', (e) => {
+                e.preventDefault();
+                keys['ArrowLeft'] = false;
+                keys['ArrowRight'] = false;
+                keys['ArrowUp'] = false;
+            });
+        });
+    }
+}
+
+// Initialize mobile controls on load
+initMobileControls();
