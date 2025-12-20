@@ -518,3 +518,159 @@ class Projectile {
         ctx.restore();
     }
 }
+
+// ============================================
+// SPIDER ENEMY CLASS (Ceiling Crawler)
+// ============================================
+class Spider extends Enemy {
+    constructor(x, y, ceilingY) {
+        super(x, y, 'spider');
+        this.width = 30;
+        this.height = 25;
+        this.velocityX = 1.5;
+        this.ceilingY = ceilingY || 50; // Default ceiling position
+        this.onCeiling = true;
+    }
+
+    update(deltaTime) {
+        if (!this.alive) return;
+
+        // Move horizontally on ceiling
+        this.x += this.velocityX * this.direction;
+        this.y = this.ceilingY; // Stick to ceiling
+
+        // Turn around at edges
+        if (this.x < 0 || this.x > canvas.width - this.width) {
+            this.direction *= -1;
+        }
+
+        // Animation
+        this.animTimer += deltaTime;
+        if (this.animTimer > 120) {
+            this.animFrame = (this.animFrame + 1) % 2;
+            this.animTimer = 0;
+        }
+
+        // Check collision with player
+        if (this.checkCollision(player)) {
+            // Can defeat from below
+            if (player.velocityY < 0 && player.y > this.y + this.height / 2) {
+                this.die();
+                player.velocityY = 5; // Bounce down
+                score += 120 * comboMultiplier;
+                updateHUD();
+            } else {
+                player.takeDamage();
+            }
+        }
+    }
+
+    draw() {
+        if (!this.alive) return;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        if (this.direction === -1) {
+            ctx.translate(this.width, 0);
+            ctx.scale(-1, 1);
+        }
+
+        // Spider body (black/orange)
+        ctx.fillStyle = '#222';
+        ctx.fillRect(10, 10, 15, 12);
+
+        // Legs
+        ctx.fillStyle = '#ff6600';
+        const legOffset = this.animFrame === 0 ? 0 : 2;
+        // Left legs
+        ctx.fillRect(8, 8 + legOffset, 5, 2);
+        ctx.fillRect(8, 15 + legOffset, 5, 2);
+        // Right legs
+        ctx.fillRect(22, 8 + legOffset, 5, 2);
+        ctx.fillRect(22, 15 + legOffset, 5, 2);
+
+        // Eyes
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(13, 13, 2, 2);
+        ctx.fillRect(17, 13, 2, 2);
+
+        ctx.restore();
+    }
+}
+
+// ============================================
+// GHOST ENEMY CLASS (Float through platforms)
+// ============================================
+class Ghost extends Enemy {
+    constructor(x, y) {
+        super(x, y, 'ghost');
+        this.width = 28;
+        this.height = 32;
+        this.velocityX = 1;
+        this.startY = y;
+        this.floatOffset = Math.random() * Math.PI * 2;
+        this.floatSpeed = 0.03;
+        this.transparency = 0.7;
+    }
+
+    update(deltaTime) {
+        if (!this.alive) return;
+
+        // Horizontal movement
+        this.x += this.velocityX * this.direction;
+
+        // Vertical floating
+        this.floatOffset += this.floatSpeed;
+        this.y = this.startY + Math.sin(this.floatOffset) * 40;
+
+        // Turn around at edges
+        if (this.x < 0 || this.x > canvas.width - this.width) {
+            this.direction *= -1;
+        }
+
+        // Animation
+        this.animTimer += deltaTime;
+        if (this.animTimer > 150) {
+            this.animFrame = (this.animFrame + 1) % 2;
+            this.animTimer = 0;
+        }
+
+        // Check collision with player (can't jump on ghosts, must shoot)
+        if (this.checkCollision(player)) {
+            player.takeDamage();
+        }
+    }
+
+    draw() {
+        if (!this.alive) return;
+
+        ctx.save();
+        ctx.globalAlpha = this.transparency;
+        ctx.translate(this.x, this.y);
+
+        if (this.direction === -1) {
+            ctx.translate(this.width, 0);
+            ctx.scale(-1, 1);
+        }
+
+        // Ghost body (white/blue)
+        ctx.fillStyle = '#e0e0ff';
+        // Head
+        ctx.fillRect(6, 0, 16, 18);
+        // Body with wavy bottom
+        ctx.fillRect(4, 18, 20, 10);
+        
+        const wave = this.animFrame === 0 ? 0 : 2;
+        ctx.fillRect(4, 28 + wave, 6, 4);
+        ctx.fillRect(12, 28 - wave, 6, 4);
+        ctx.fillRect(20, 28 + wave, 6, 4);
+
+        // Eyes
+        ctx.fillStyle = '#000';
+        ctx.fillRect(10, 8, 3, 4);
+        ctx.fillRect(17, 8, 3, 4);
+
+        ctx.restore();
+    }
+}

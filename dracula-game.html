@@ -42,6 +42,7 @@
                     <span class="hud-label">Tiempo:</span>
                     <span id="timer">0</span>
                 </div>
+                <div id="gamepad-indicator" class="gamepad-indicator" style="display: none;">🎮</div>
                 <div id="combo-display" class="combo-display" style="display: none;">COMBO x1</div>
             </div>
             <canvas id="game-canvas"></canvas>
@@ -83,6 +84,15 @@
             </div>
             <button id="restart-victory-btn" class="game-btn">Jugar de Nuevo</button>
             <button id="menu-victory-btn" class="game-btn">Menú Principal</button>
+        </div>
+
+        <!-- Achievement Popup -->
+        <div id="achievement-popup" class="achievement-popup">
+            <span class="achievement-icon">🏆</span>
+            <div class="achievement-text">
+                <div class="achievement-name">Achievement Unlocked!</div>
+                <div class="achievement-desc">Description</div>
+            </div>
         </div>
     </div>
 

@@ -292,6 +292,8 @@ const levels = [
             { x: 750, y: 150, type: 'cat' },
             { x: 400, y: 250, type: 'bat' },
             { x: 650, y: 200, type: 'bat' },
+            { x: 200, y: 100, type: 'spider', ceilingY: 100 },
+            { x: 500, y: 80, type: 'spider', ceilingY: 80 },
         ],
         collectibles: [
             { x: 350, y: 390, type: 'coin' },
@@ -515,6 +517,8 @@ class Player {
             this.invincible = true;
             this.invincibleTime = 2000;
             playDamageSound();
+            achievementStats.damageTakenThisLevel++; // Track damage
+            vibrateGamepad(300, 0.8); // Vibrate controller
 
             if (lives <= 0) {
                 gameOver();
@@ -669,6 +673,10 @@ function loadLevel(levelIndex) {
     level.enemies.forEach(e => {
         if (e.type === 'bat') {
             enemies.push(new Bat(e.x, e.y));
+        } else if (e.type === 'spider') {
+            enemies.push(new Spider(e.x, e.y, e.ceilingY || 50));
+        } else if (e.type === 'ghost') {
+            enemies.push(new Ghost(e.x, e.y));
         } else {
             enemies.push(new Enemy(e.x, e.y, e.type));
         }
@@ -709,6 +717,10 @@ function updateHUD() {
 }
 
 function update(deltaTime) {
+    // Update gamepad in all states
+    updateGamepad();
+    updateMenuNavigation();
+
     if (gameState !== 'playing') return;
 
     // Update game time
@@ -716,6 +728,9 @@ function update(deltaTime) {
 
     // Update combo timer
     updateCombo(deltaTime);
+    
+    // Update gamepad
+    updateGamepad();
 
     // Update Player
     player.update(deltaTime);
@@ -813,7 +828,9 @@ function draw() {
     ctx.fillStyle = '#ffffff';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`Nivel ${currentLevel + 1}: ${levels[currentLevel].name}`, canvas.width / 2, 30);
+    if (levels[currentLevel]) {
+        ctx.fillText(`Nivel ${currentLevel + 1}: ${levels[currentLevel].name}`, canvas.width / 2, 30);
+    }
     ctx.textAlign = 'left';
 
     ctx.restore(); // End screen shake
@@ -1031,13 +1048,18 @@ function addCombo() {
     // Calculate multiplier (max 5x)
     if (comboCount >= 15) comboMultiplier = 5;
     else if (comboCount >= 10) comboMultiplier = 4;
-    else if (comboCount >= 6) comboMultiplier = 3;
+    else if (comboCount >= 5) comboMultiplier = 3;
     else if (comboCount >= 3) comboMultiplier = 2;
     else comboMultiplier = 1;
 
     // Play combo sound
     if (comboMultiplier >= 3) {
         playSound(800 + (comboMultiplier * 100), 0.15, 'square', 0.2);
+    
+    // Check for achievements
+    checkAchievements();
+    checkAchievements();
+    console.log('[COMBO]', comboCount, 'x' + comboMultiplier);
     }
 }
 
@@ -1064,3 +1086,345 @@ let cameraShake = 0;
 function screenShake(intensity) {
     cameraShake = intensity;
 }
+
+// ============================================
+// ACHIEVEMENT SYSTEM
+// ============================================
+const achievements = {
+    speedRunner: {
+        name: "⚡ Speed Runner",
+        description: "Completa un nivel en menos de 60 segundos",
+        unlocked: false
+    },
+    comboMaster: {
+        name: "🔥 Combo Master",
+        description: "Alcanza combo x3 (5 kills seguidos)",
+        unlocked: false
+    },
+    untouchable: {
+        name: "👻 Intocable",
+        description: "Completa un nivel sin recibir daño",
+        unlocked: false
+    },
+    sharpShooter: {
+        name: "🎯 Tirador Experto",
+        description: "Derrota 10 enemigos con proyectiles",
+        unlocked: false
+    },
+    doubleJumper: {
+        name: "🦇 Acróbata",
+        description: "Usa el doble salto 20 veces",
+        unlocked: false
+    }
+};
+
+let achievementStats = {
+    projectileKills: 0,
+    doubleJumps: 0,
+    levelStartTime: 0,
+    damageTakenThisLevel: 0
+};
+
+function loadAchievements() {
+    const saved = localStorage.getItem('dracula_achievements');
+    if (saved) {
+        const savedData = JSON.parse(saved);
+        Object.keys(achievements).forEach(key => {
+            if (savedData[key]) {
+                achievements[key].unlocked = savedData[key].unlocked;
+            }
+        });
+    }
+}
+
+function saveAchievements() {
+    localStorage.setItem('dracula_achievements', JSON.stringify(achievements));
+}
+
+function unlockAchievement(achievementKey) {
+    console.log('[ACHIEVEMENT]', achievementKey, achievements[achievementKey]);
+    if (!achievements[achievementKey].unlocked) {
+        achievements[achievementKey].unlocked = true;
+        saveAchievements();
+        showAchievementNotification(achievements[achievementKey]);
+    }
+}
+
+function showAchievementNotification(achievement) {
+    console.log('[NOTIFICATION] Attempting to show:', achievement);
+    const popup = document.getElementById('achievement-popup');
+    console.log('[NOTIFICATION] Popup element:', popup);
+    if (!popup) return;
+
+    const nameEl = popup.querySelector('.achievement-name');
+    const descEl = popup.querySelector('.achievement-desc');
+
+    if (nameEl) nameEl.textContent = achievement.name;
+    if (descEl) descEl.textContent = achievement.description;
+
+    popup.classList.add('show');
+    console.log('[NOTIFICATION] Added show class');
+
+    playSound(880, 0.3, 'sine', 0.4);
+
+    setTimeout(() => {
+        popup.classList.remove('show');
+    }, 3000);
+}
+
+function checkAchievements() {
+    console.log('[CHECK] Combo:', comboMultiplier, 'Projectiles:', achievementStats.projectileKills, 'DoubleJumps:', achievementStats.doubleJumps);
+    // Combo Master
+    if (comboMultiplier >= 3) {
+        unlockAchievement('comboMaster');
+    }
+
+    // Sharp Shooter
+    if (achievementStats.projectileKills >= 10) {
+        unlockAchievement('sharpShooter');
+    }
+
+    // Double Jumper
+    if (achievementStats.doubleJumps >= 20) {
+        unlockAchievement('doubleJumper');
+    }
+}
+
+// ============================================
+// GAMEPAD SUPPORT
+// ============================================
+let gamepadConnected = false;
+let gamepad = null;
+let gamepadButtonsPressed = {};
+
+// Gamepad button mapping (standard layout)
+const GAMEPAD_BUTTONS = {
+    A: 0,        // Jump
+    B: 1,        // Shoot
+    X: 2,
+    Y: 3,
+    LB: 4,
+    RB: 5,
+    LT: 6,
+    RT: 7,
+    SELECT: 8,
+    START: 9,    // Pause
+    L_STICK: 10,
+    R_STICK: 11,
+    DPAD_UP: 12,
+    DPAD_DOWN: 13,
+    DPAD_LEFT: 14,
+    DPAD_RIGHT: 15
+};
+
+window.addEventListener('gamepadconnected', (e) => {
+    console.log('Gamepad connected:', e.gamepad.id);
+    gamepadConnected = true;
+    gamepad = e.gamepad;
+    showGamepadIndicator();
+});
+
+window.addEventListener('gamepaddisconnected', (e) => {
+    console.log('Gamepad disconnected');
+    gamepadConnected = false;
+    gamepad = null;
+    hideGamepadIndicator();
+});
+
+function showGamepadIndicator() {
+    const indicator = document.getElementById('gamepad-indicator');
+    if (indicator) {
+        indicator.style.display = 'block';
+    }
+}
+
+function hideGamepadIndicator() {
+    const indicator = document.getElementById('gamepad-indicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+    }
+}
+
+function updateGamepad() {
+    if (!gamepadConnected) return;
+
+    // Get the latest gamepad state
+    const gamepads = navigator.getGamepads();
+    gamepad = gamepads[0] || gamepads[1] || gamepads[2] || gamepads[3];
+
+    if (!gamepad) return;
+
+    // Left stick / D-Pad for movement
+    const axisX = gamepad.axes[0]; // Left stick X axis
+    const threshold = 0.3;
+
+    // Simulate keyboard keys for gamepad input
+    if (axisX < -threshold || gamepad.buttons[GAMEPAD_BUTTONS.DPAD_LEFT]?.pressed) {
+        keys['ArrowLeft'] = true;
+        keys['ArrowRight'] = false;
+    } else if (axisX > threshold || gamepad.buttons[GAMEPAD_BUTTONS.DPAD_RIGHT]?.pressed) {
+        keys['ArrowRight'] = true;
+        keys['ArrowLeft'] = false;
+    } else {
+        keys['ArrowLeft'] = false;
+        keys['ArrowRight'] = false;
+    }
+
+    // A button for jump
+    if (gamepad.buttons[GAMEPAD_BUTTONS.A]?.pressed) {
+        if (!gamepadButtonsPressed['jump']) {
+            keys['ArrowUp'] = true;
+            gamepadButtonsPressed['jump'] = true;
+        }
+    } else {
+        keys['ArrowUp'] = false;
+        gamepadButtonsPressed['jump'] = false;
+    }
+
+    // B button for shoot
+    if (gamepad.buttons[GAMEPAD_BUTTONS.B]?.pressed) {
+        if (!gamepadButtonsPressed['shoot'] && player && gameState === 'playing') {
+            player.shoot();
+            gamepadButtonsPressed['shoot'] = true;
+        }
+    } else {
+        gamepadButtonsPressed['shoot'] = false;
+    }
+
+    // Start button for pause
+    if (gamepad.buttons[GAMEPAD_BUTTONS.START]?.pressed) {
+        if (!gamepadButtonsPressed['pause']) {
+            if (gameState === 'playing') {
+                pauseGame();
+            } else if (gameState === 'paused') {
+            } else if (gameState === 'start') {
+                startGame();
+                resumeGame();
+            } else if (gameState === 'start') {
+                startGame();
+            }
+            gamepadButtonsPressed['pause'] = true;
+        }
+    } else {
+        gamepadButtonsPressed['pause'] = false;
+    }
+}
+
+function vibrateGamepad(duration = 200, intensity = 1.0) {
+    if (!gamepad || !gamepad.vibrationActuator) return;
+
+    gamepad.vibrationActuator.playEffect('dual-rumble', {
+        startDelay: 0,
+        duration: duration,
+        weakMagnitude: intensity * 0.5,
+        strongMagnitude: intensity
+    });
+}
+
+// ============================================
+// GAMEPAD MENU NAVIGATION SYSTEM
+// ============================================
+let menuButtons = [];
+let selectedButtonIndex = 0;
+
+function getMenuButtons(screen) {
+    const buttons = [];
+    const screenEl = document.getElementById(screen);
+    if (!screenEl) return buttons;
+    
+    const btnElements = screenEl.querySelectorAll('button.game-btn');
+    btnElements.forEach((btn, index) => {
+        if (btn.offsetParent !== null) { // visible
+            buttons.push({
+                element: btn,
+                index: index
+            });
+        }
+    });
+    return buttons;
+}
+
+function updateMenuSelection() {
+    // Remove previous highlights
+    document.querySelectorAll('.game-btn').forEach(btn => {
+        btn.classList.remove('gamepad-selected');
+    });
+    
+    // Highlight current
+    if (menuButtons.length > 0 && menuButtons[selectedButtonIndex]) {
+        menuButtons[selectedButtonIndex].element.classList.add('gamepad-selected');
+    }
+}
+
+function updateMenuNavigation() {
+    if (!gamepadConnected || !gamepad) return;
+    
+    // Only navigate in menu screens
+    if (gameState === 'playing') return;
+    
+    // Get current screen buttons
+    let currentScreen = 'start-screen';
+    if (gameState === 'paused') currentScreen = 'pause-screen';
+    else if (gameState === 'gameover') currentScreen = 'gameover-screen';
+    else if (gameState === 'victory') currentScreen = 'victory-screen';
+    
+    menuButtons = getMenuButtons(currentScreen);
+    
+    if (menuButtons.length === 0) return;
+    
+    // D-Pad / Left Stick Navigation
+    const axisY = gamepad.axes[1]; // Vertical axis
+    const threshold = 0.5;
+    
+    if ((axisY < -threshold || gamepad.buttons[GAMEPAD_BUTTONS.DPAD_UP]?.pressed) && !gamepadButtonsPressed['up']) {
+        selectedButtonIndex = Math.max(0, selectedButtonIndex - 1);
+        updateMenuSelection();
+        playSound(400, 0.05, 'square', 0.1);
+        gamepadButtonsPressed['up'] = true;
+    } else if (!gamepad.buttons[GAMEPAD_BUTTONS.DPAD_UP]?.pressed && Math.abs(axisY) < threshold) {
+        gamepadButtonsPressed['up'] = false;
+    }
+    
+    if ((axisY > threshold || gamepad.buttons[GAMEPAD_BUTTONS.DPAD_DOWN]?.pressed) && !gamepadButtonsPressed['down']) {
+        selectedButtonIndex = Math.min(menuButtons.length - 1, selectedButtonIndex + 1);
+        updateMenuSelection();
+        playSound(400, 0.05, 'square', 0.1);
+        gamepadButtonsPressed['down'] = true;
+    } else if (!gamepad.buttons[GAMEPAD_BUTTONS.DPAD_DOWN]?.pressed && Math.abs(axisY) < threshold) {
+        gamepadButtonsPressed['down'] = false;
+    }
+    
+    // A button to confirm
+    if (gamepad.buttons[GAMEPAD_BUTTONS.A]?.pressed && !gamepadButtonsPressed['confirm']) {
+        if (menuButtons[selectedButtonIndex]) {
+            menuButtons[selectedButtonIndex].element.click();
+            playSound(600, 0.1, 'sine', 0.2);
+        }
+        gamepadButtonsPressed['confirm'] = true;
+    } else if (!gamepad.buttons[GAMEPAD_BUTTONS.A]?.pressed) {
+        gamepadButtonsPressed['confirm'] = false;
+    }
+    
+    // B button to go back (return to menu from pause/gameover)
+    if (gamepad.buttons[GAMEPAD_BUTTONS.B]?.pressed && !gamepadButtonsPressed['back']) {
+        if (gameState === 'paused') {
+            resumeGame();
+        }
+        gamepadButtonsPressed['back'] = true;
+    } else if (!gamepad.buttons[GAMEPAD_BUTTONS.B]?.pressed) {
+        gamepadButtonsPressed['back'] = false;
+    }
+    
+    // Update highlights
+    updateMenuSelection();
+}
+
+// Initialize menu selection when showing a screen
+function initializeMenuSelection(screenId) {
+    selectedButtonIndex = 0;
+    menuButtons = getMenuButtons(screenId);
+    updateMenuSelection();
+}
+
+// Call when showing screens
+const originalShowScreen = typeof showScreen !== 'undefined' ? showScreen : null;

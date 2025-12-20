@@ -487,3 +487,87 @@ body {
     from { transform: translate(-50%, -50%) scale(1); }
     to { transform: translate(-50%, -50%) scale(1.05); }
 }
+
+/* Achievement Popup */
+.achievement-popup {
+    position: fixed;
+    top: -100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #4a0080 0%, #8b00ff 100%);
+    padding: 20px 30px;
+    border-radius: 15px;
+    border: 3px solid #ff00ff;
+    box-shadow: 0 10px 30px rgba(255, 0, 255, 0.6),
+                inset 0 0 20px rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 10000;
+    transition: top 0.5s ease-out;
+    min-width: 300px;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.achievement-popup.show {
+    top: 20px;
+    opacity: 1;
+    visibility: visible;
+}
+
+.achievement-icon {
+    font-size: 3rem;
+    animation: bounce 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-10px); }
+}
+
+.achievement-text {
+    flex: 1;
+}
+
+.achievement-name {
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
+    margin-bottom: 5px;
+}
+
+.achievement-desc {
+    font-size: 0.9rem;
+    color: #e0e0ff;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Gamepad Indicator */
+.gamepad-indicator {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 2rem;
+    animation: pulse 1.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.8));
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+/* Gamepad Menu Selection */
+.game-btn.gamepad-selected {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.8),
+                0 8px 25px rgba(255, 0, 0, 0.6);
+    border-color: #ffff00;
+    background: linear-gradient(135deg, #ff0000 0%, #ff3333 100%);
+}
+
+.game-btn.gamepad-selected::before {
+    content: '🎮 ';
+}
