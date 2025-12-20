@@ -221,6 +221,12 @@ let gameTime = 0;
 let keys = {};
 let animationId;
 
+// Combo System
+let comboCount = 0;
+let comboMultiplier = 1;
+let comboTimer = 0;
+const COMBO_TIMEOUT = 3000; // 3 seconds
+
 // Game Objects
 let player;
 let platforms = [];
@@ -396,6 +402,8 @@ class Player {
         this.animTimer = 0;
         this.shootCooldown = 0;
         this.shootCooldownTime = 500; // 0.5 seconds between shots
+        this.jumpsRemaining = 2; // Double jump enabled
+        this.hasDoubleJump = true;
     }
 
     update(deltaTime) {
@@ -411,11 +419,25 @@ class Player {
         }
 
         // Jump
-        if (keys['ArrowUp'] && this.onGround) {
+        if (keys['ArrowUp'] && this.jumpsRemaining > 0 && !this.wasJumpPressed) {
             this.velocityY = JUMP_FORCE;
             this.jumping = true;
             this.onGround = false;
-            playJumpSound();
+            this.jumpsRemaining--;
+
+            // Second jump effect
+            if (this.jumpsRemaining === 0) {
+                createParticles(this.x + this.width / 2, this.y + this.height, '#9933ff');
+                playSound(600, 0.15, 'sine', 0.2);
+            } else {
+                playJumpSound();
+            }
+
+            this.wasJumpPressed = true;
+        }
+
+        if (!keys['ArrowUp']) {
+            this.wasJumpPressed = false;
         }
 
         // Apply Gravity
@@ -438,6 +460,7 @@ class Player {
             this.velocityY = 0;
             this.jumping = false;
             this.onGround = true;
+            this.jumpsRemaining = 2; // Reset double jump
         }
 
         // Platform Collision
@@ -448,6 +471,7 @@ class Player {
                     this.velocityY = 0;
                     this.jumping = false;
                     this.onGround = true;
+                    this.jumpsRemaining = 2; // Reset double jump
                 }
             }
         });
@@ -665,6 +689,23 @@ function updateHUD() {
     document.getElementById('score').textContent = score;
     document.getElementById('lives').textContent = '❤️'.repeat(Math.max(0, lives));
     document.getElementById('timer').textContent = Math.floor(gameTime / 1000);
+
+    // Update combo display
+    const comboDisplay = document.getElementById('combo-display');
+    if (comboDisplay) {
+        if (comboCount > 0) {
+            comboDisplay.style.display = 'block';
+            comboDisplay.textContent = `COMBO x${comboMultiplier} (${comboCount})`;
+
+            // Color based on multiplier
+            if (comboMultiplier >= 5) comboDisplay.style.color = '#ff00ff';
+            else if (comboMultiplier >= 4) comboDisplay.style.color = '#ff0000';
+            else if (comboMultiplier >= 3) comboDisplay.style.color = '#ff6600';
+            else comboDisplay.style.color = '#ffff00';
+        } else {
+            comboDisplay.style.display = 'none';
+        }
+    }
 }
 
 function update(deltaTime) {
@@ -672,6 +713,9 @@ function update(deltaTime) {
 
     // Update game time
     gameTime += deltaTime;
+
+    // Update combo timer
+    updateCombo(deltaTime);
 
     // Update Player
     player.update(deltaTime);
@@ -962,4 +1006,39 @@ if (btnShoot) {
             player.shoot();
         }
     });
+}
+
+// ============================================
+// COMBO SYSTEM FUNCTIONS
+// ============================================
+function addCombo() {
+    comboCount++;
+    comboTimer = COMBO_TIMEOUT;
+
+    // Calculate multiplier (max 5x)
+    if (comboCount >= 15) comboMultiplier = 5;
+    else if (comboCount >= 10) comboMultiplier = 4;
+    else if (comboCount >= 6) comboMultiplier = 3;
+    else if (comboCount >= 3) comboMultiplier = 2;
+    else comboMultiplier = 1;
+
+    // Play combo sound
+    if (comboMultiplier >= 3) {
+        playSound(800 + (comboMultiplier * 100), 0.15, 'square', 0.2);
+    }
+}
+
+function resetCombo() {
+    comboCount = 0;
+    comboMultiplier = 1;
+    comboTimer = 0;
+}
+
+function updateCombo(deltaTime) {
+    if (comboTimer > 0) {
+        comboTimer -= deltaTime;
+        if (comboTimer <= 0) {
+            resetCombo();
+        }
+    }
 }

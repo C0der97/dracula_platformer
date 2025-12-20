@@ -285,7 +285,7 @@ class Enemy {
             if (player.velocityY > 0 && player.y + player.height - player.velocityY < this.y + this.height / 2) {
                 this.die();
                 player.velocityY = -13 * 0.5; // JUMP_FORCE * 0.5
-                score += this.type === 'cat' ? 100 : 200;
+                score += (this.type === 'cat' ? 100 : 200) * comboMultiplier;
                 updateHUD();
             } else {
                 player.takeDamage();
@@ -304,6 +304,9 @@ class Enemy {
         this.alive = false;
         createParticles(this.x + this.width / 2, this.y + this.height / 2, this.type === 'cat' ? '#ff8800' : '#8b4513');
         playDefeatSound();
+
+        // Add combo
+        addCombo();
     }
 
     draw() {
@@ -404,7 +407,7 @@ class Bat extends Enemy {
             if (player.velocityY > 0 && player.y + player.height - player.velocityY < this.y + this.height / 2) {
                 this.die();
                 player.velocityY = JUMP_FORCE * 0.5;
-                score += 150;
+                score += 150 * comboMultiplier;
                 updateHUD();
             } else {
                 player.takeDamage();
@@ -471,13 +474,13 @@ class Projectile {
         // Check collision with enemies
         enemies.forEach(enemy => {
             if (!enemy.alive) return;
-            
+
             if (this.checkCollision(enemy)) {
                 enemy.die();
                 this.active = false;
-                score += 150; // Bonus for projectile kill
+                score += 150 * comboMultiplier; // Bonus for projectile kill
                 updateHUD();
-                
+
                 // Create blood particles
                 createParticles(this.x, this.y, '#ff0000');
             }
@@ -486,32 +489,32 @@ class Projectile {
 
     checkCollision(obj) {
         return this.x < obj.x + obj.width &&
-               this.x + this.width > obj.x &&
-               this.y < obj.y + obj.height &&
-               this.y + this.height > obj.y;
+            this.x + this.width > obj.x &&
+            this.y < obj.y + obj.height &&
+            this.y + this.height > obj.y;
     }
 
     draw() {
         if (!this.active) return;
 
         ctx.save();
-        
+
         // Blood drop with glow effect
         ctx.shadowBlur = 10;
         ctx.shadowColor = '#ff0000';
-        
+
         // Main drop
         ctx.fillStyle = '#cc0000';
         ctx.beginPath();
-        ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
+        ctx.arc(this.x + this.width / 2, this.y + this.height / 2, this.width / 2, 0, Math.PI * 2);
         ctx.fill();
-        
+
         // Highlight
         ctx.fillStyle = '#ff3333';
         ctx.beginPath();
-        ctx.arc(this.x + this.width/2 - 1, this.y + this.height/2 - 1, this.width/4, 0, Math.PI * 2);
+        ctx.arc(this.x + this.width / 2 - 1, this.y + this.height / 2 - 1, this.width / 4, 0, Math.PI * 2);
         ctx.fill();
-        
+
         ctx.restore();
     }
 }
