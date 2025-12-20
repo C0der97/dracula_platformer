@@ -476,10 +476,28 @@ class Projectile {
             if (!enemy.alive) return;
 
             if (this.checkCollision(enemy)) {
-                enemy.die();
-                this.active = false;
-                score += 150 * comboMultiplier; // Bonus for projectile kill
-                updateHUD();
+                // Check if this is a boss enemy
+                if (enemy.isBoss && enemy.takeDamage) {
+                    // Boss takes damage but doesn't die immediately
+                    enemy.takeDamage(1);
+                    this.active = false;
+
+                    // Track projectile kill achievement
+                    achievementStats.projectileKills++;
+                    checkAchievements();
+
+                    // No score until boss dies (boss awards score on death)
+                } else {
+                    // Regular enemy - dies in one hit
+                    enemy.die();
+                    this.active = false;
+                    score += 150 * comboMultiplier; // Bonus for projectile kill
+                    updateHUD();
+
+                    // Track projectile kill achievement
+                    achievementStats.projectileKills++;
+                    checkAchievements();
+                }
 
                 // Create blood particles
                 createParticles(this.x, this.y, '#ff0000');
@@ -660,7 +678,7 @@ class Ghost extends Enemy {
         ctx.fillRect(6, 0, 16, 18);
         // Body with wavy bottom
         ctx.fillRect(4, 18, 20, 10);
-        
+
         const wave = this.animFrame === 0 ? 0 : 2;
         ctx.fillRect(4, 28 + wave, 6, 4);
         ctx.fillRect(12, 28 - wave, 6, 4);
@@ -670,6 +688,319 @@ class Ghost extends Enemy {
         ctx.fillStyle = '#000';
         ctx.fillRect(10, 8, 3, 4);
         ctx.fillRect(17, 8, 3, 4);
+
+        ctx.restore();
+    }
+}
+
+// ============================================
+// CAT GOLEM BOSS CLASS (Boss Fight)
+// ============================================
+class CatGolem extends Enemy {
+    constructor(x, y) {
+        super(x, y, 'catgolem');
+        this.width = 100;
+        this.height = 120;
+        this.velocityX = 0.5; // Moves slowly
+
+        // Boss stats
+        this.maxHP = 10;
+        this.hp = this.maxHP;
+        this.isBoss = true;
+
+        // Attack system
+        this.attackCooldown = 0;
+        this.attackCooldownTime = 3000; // 3 seconds between attacks
+        this.isAttacking = false;
+        this.attackTimer = 0;
+        this.attackDuration = 800; // Attack animation duration
+        this.hammerY = 0; // Hammer position for animation
+
+        // Attack properties
+        this.attackRange = 100; // Attack radius
+        this.attackDamage = 1;
+    }
+
+    takeDamage(damage = 1) {
+        if (this.hp <= 0) return;
+
+        this.hp -= damage;
+
+        // Create hit particles
+        createParticles(this.x + this.width / 2, this.y + this.height / 2, '#ff0000');
+        playSound(300, 0.15, 'square', 0.2);
+
+        // Screen shake on hit
+        screenShake(5);
+
+        // Check if defeated
+        if (this.hp <= 0) {
+            this.die();
+        }
+    }
+
+    die() {
+        this.alive = false;
+
+        // Epic death particles
+        for (let i = 0; i < 30; i++) {
+            createParticles(
+                this.x + Math.random() * this.width,
+                this.y + Math.random() * this.height,
+                '#8b4513'
+            );
+        }
+
+        // Big screen shake
+        screenShake(20);
+
+        // Victory sound and score
+        playVictorySound();
+        score += 1000 * comboMultiplier;
+        updateHUD();
+    }
+
+    attack() {
+        if (this.isAttacking || this.attackCooldown > 0) return;
+
+        this.isAttacking = true;
+        this.attackTimer = 0;
+        this.hammerY = 0;
+
+        // Sound for hammer swing
+        playSound(200, 0.3, 'sawtooth', 0.3);
+    }
+
+    update(deltaTime) {
+        if (!this.alive) return;
+
+        // Movement
+        this.x += this.velocityX * this.direction;
+
+        // Apply Gravity
+        this.velocityY += 0.6; // GRAVITY
+        this.y += this.velocityY;
+
+        // Floor Collision
+        if (this.y + this.height >= 500) { // FLOOR_Y
+            this.y = 500 - this.height;
+            this.velocityY = 0;
+        }
+
+        // Turn around at edges
+        if (this.x < 0 || this.x > canvas.width - this.width) {
+            this.direction *= -1;
+        }
+
+        // Animation
+        this.animTimer += deltaTime;
+        if (this.animTimer > 200) {
+            this.animFrame = (this.animFrame + 1) % 2;
+            this.animTimer = 0;
+        }
+
+        // Attack cooldown
+        if (this.attackCooldown > 0) {
+            this.attackCooldown -= deltaTime;
+        }
+
+        // Attack logic
+        if (this.isAttacking) {
+            this.attackTimer += deltaTime;
+
+            // Hammer animation (raise then slam)
+            if (this.attackTimer < this.attackDuration / 2) {
+                // Raising hammer
+                this.hammerY = -30 * (this.attackTimer / (this.attackDuration / 2));
+            } else if (this.attackTimer >= this.attackDuration / 2 && this.attackTimer < this.attackDuration) {
+                // Slamming hammer
+                this.hammerY = -30 + 30 * ((this.attackTimer - this.attackDuration / 2) / (this.attackDuration / 2));
+
+                // Impact moment
+                if (this.attackTimer >= this.attackDuration - 50 && this.hammerY >= -5) {
+                    // Only trigger once
+                    if (!this.impacted) {
+                        this.onHammerImpact();
+                        this.impacted = true;
+                    }
+                }
+            } else {
+                // Attack finished
+                this.isAttacking = false;
+                this.attackCooldown = this.attackCooldownTime;
+                this.hammerY = 0;
+                this.impacted = false;
+            }
+        } else {
+            // Try to attack if player is nearby
+            if (player && Math.abs(player.x - this.x) < 200) {
+                this.attack();
+            }
+        }
+
+        // Check collision with player (contact damage)
+        if (this.checkCollision(player)) {
+            // Boss can't be defeated by jumping
+            if (player.velocityY > 0 && player.y + player.height - player.velocityY < this.y + this.height / 2) {
+                // Player tried to jump on boss - take damage instead
+                player.takeDamage();
+                player.velocityY = -8; // Bounce off
+            } else {
+                player.takeDamage();
+            }
+        }
+    }
+
+    onHammerImpact() {
+        // Screen shake!
+        screenShake(15);
+
+        // Impact sound
+        playSound(100, 0.5, 'sawtooth', 0.4);
+
+        // Vibrate gamepad
+        vibrateGamepad(400, 1.0);
+
+        // Create impact particles
+        for (let i = 0; i < 20; i++) {
+            createParticles(
+                this.x + this.width / 2 + (Math.random() - 0.5) * 60,
+                this.y + this.height,
+                '#888888'
+            );
+        }
+
+        // Check if player is in attack range
+        if (player) {
+            const distanceToPlayer = Math.abs((player.x + player.width / 2) - (this.x + this.width / 2));
+            if (distanceToPlayer < this.attackRange) {
+                player.takeDamage();
+                // Knock player back
+                player.velocityX = (player.x < this.x) ? -10 : 10;
+                player.velocityY = -8;
+            }
+        }
+    }
+
+    drawHealthBar() {
+        if (this.hp <= 0) return;
+
+        const barWidth = 80;
+        const barHeight = 8;
+        const barX = this.x + (this.width - barWidth) / 2;
+        const barY = this.y - 20;
+
+        // Background
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(barX - 2, barY - 2, barWidth + 4, barHeight + 4);
+
+        // Red background (empty health)
+        ctx.fillStyle = '#ff0000';
+        ctx.fillRect(barX, barY, barWidth, barHeight);
+
+        // Green foreground (current health)
+        const healthPercent = this.hp / this.maxHP;
+        ctx.fillStyle = healthPercent > 0.5 ? '#00ff00' : healthPercent > 0.25 ? '#ffff00' : '#ff6600';
+        ctx.fillRect(barX, barY, barWidth * healthPercent, barHeight);
+
+        // Border
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+        // HP text
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${this.hp}/${this.maxHP}`, barX + barWidth / 2, barY + barHeight + 12);
+        ctx.textAlign = 'left';
+    }
+
+    draw() {
+        if (!this.alive) return;
+
+        ctx.save();
+
+        // Draw health bar first
+        this.drawHealthBar();
+
+        // Translate to enemy position
+        ctx.translate(this.x, this.y);
+
+        // Flip sprite if moving left
+        if (this.direction === -1) {
+            ctx.translate(this.width, 0);
+            ctx.scale(-1, 1);
+        }
+
+        // Giant Cat Golem (stone/rock colors)
+        // Body (large, blocky)
+        ctx.fillStyle = '#5a4a3a';
+        ctx.fillRect(10, 40, this.width - 20, this.height - 45);
+
+        // Stone texture lines
+        ctx.strokeStyle = '#4a3a2a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(20, 60);
+        ctx.lineTo(this.width - 20, 60);
+        ctx.moveTo(20, 90);
+        ctx.lineTo(this.width - 20, 90);
+        ctx.stroke();
+
+        // Head (massive)
+        ctx.fillStyle = '#6a5a4a';
+        ctx.fillRect(20, 10, this.width - 40, 40);
+
+        // Ears (cat-like, pointed)
+        ctx.fillStyle = '#5a4a3a';
+        ctx.beginPath();
+        ctx.moveTo(25, 10);
+        ctx.lineTo(30, 0);
+        ctx.lineTo(35, 10);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(this.width - 35, 10);
+        ctx.lineTo(this.width - 30, 0);
+        ctx.lineTo(this.width - 25, 10);
+        ctx.fill();
+
+        // Eyes (glowing orange)
+        ctx.fillStyle = '#ff6600';
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#ff6600';
+        ctx.fillRect(30, 25, 10, 10);
+        ctx.fillRect(this.width - 40, 25, 10, 10);
+        ctx.shadowBlur = 0;
+
+        // Fangs
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(35, 42, 6, 10);
+        ctx.fillRect(this.width - 41, 42, 6, 10);
+
+        // Legs (thick)
+        ctx.fillStyle = '#5a4a3a';
+        ctx.fillRect(15, this.height - 25, 15, 25);
+        ctx.fillRect(35, this.height - 25, 15, 25);
+        ctx.fillRect(this.width - 50, this.height - 25, 15, 25);
+        ctx.fillRect(this.width - 30, this.height - 25, 15, 25);
+
+        // Hammer/Mazo
+        const hammerX = this.width - 15;
+        const hammerY = 30 + this.hammerY;
+
+        // Hammer handle
+        ctx.fillStyle = '#3a2a1a';
+        ctx.fillRect(hammerX, hammerY, 8, 50);
+
+        // Hammer head
+        ctx.fillStyle = '#888888';
+        ctx.fillRect(hammerX - 10, hammerY - 5, 28, 15);
+
+        // Hammer detail (metallic look)
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillRect(hammerX - 8, hammerY - 3, 4, 11);
 
         ctx.restore();
     }

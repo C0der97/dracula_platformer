@@ -236,6 +236,34 @@ let collectibles = [];
 let projectiles = [];
 let currentLevel = 0;
 
+
+// Screen Shake
+let cameraShake = 0;
+// Gamepad Support Variables
+let gamepadConnected = false;
+let gamepad = null;
+let gamepadButtonsPressed = {};
+
+// Gamepad button mapping (standard layout)
+const GAMEPAD_BUTTONS = {
+    A: 0,
+    B: 1,
+    X: 2,
+    Y: 3,
+    LB: 4,
+    RB: 5,
+    LT: 6,
+    RT: 7,
+    SELECT: 8,
+    START: 9,
+    L_STICK: 10,
+    R_STICK: 11,
+    DPAD_UP: 12,
+    DPAD_DOWN: 13,
+    DPAD_LEFT: 14,
+    DPAD_RIGHT: 15
+};
+
 // Timing
 let lastTime = 0;
 const FPS = 60;
@@ -380,6 +408,29 @@ const levels = [
             { x: 700, y: 170, type: 'coin' },
             { x: 150, y: 460, type: 'heart' },
             { x: 500, y: 140, type: 'star' },
+        ]
+    },
+    // Level 5: BOSS FIGHT - Cat Golem
+    {
+        id: 5,
+        name: "¡JEFE: Gato Golem!",
+        platforms: [
+            { x: 150, y: 450, width: 200 },
+            { x: 550, y: 450, width: 200 },
+            { x: 100, y: 350, width: 150 },
+            { x: 650, y: 350, width: 150 },
+            { x: 350, y: 280, width: 200 },
+        ],
+        movingPlatforms: [],
+        enemies: [
+            { x: 400, y: 200, type: 'catgolem' }, // THE BOSS!
+        ],
+        collectibles: [
+            { x: 200, y: 420, type: 'heart' },
+            { x: 600, y: 420, type: 'heart' },
+            { x: 150, y: 320, type: 'star' },
+            { x: 700, y: 320, type: 'star' },
+            { x: 400, y: 250, type: 'coin' },
         ]
     }
 ];
@@ -677,6 +728,9 @@ function loadLevel(levelIndex) {
             enemies.push(new Spider(e.x, e.y, e.ceilingY || 50));
         } else if (e.type === 'ghost') {
             enemies.push(new Ghost(e.x, e.y));
+        } else if (e.type === 'catgolem') {
+            // BOSS FIGHT!
+            enemies.push(new CatGolem(e.x, e.y));
         } else {
             enemies.push(new Enemy(e.x, e.y, e.type));
         }
@@ -728,7 +782,7 @@ function update(deltaTime) {
 
     // Update combo timer
     updateCombo(deltaTime);
-    
+
     // Update gamepad
     updateGamepad();
 
@@ -819,7 +873,9 @@ function draw() {
     projectiles.forEach(projectile => projectile.draw());
 
     // Draw Player
-    player.draw();
+    if (player) {
+        player.draw();
+    }
 
     // Draw Particles
     particles.forEach(p => p.draw());
@@ -845,9 +901,8 @@ function gameLoop(currentTime) {
         lastTime = currentTime - (deltaTime % frameDelay);
     }
 
-    if (gameState === 'playing' || gameState === 'paused') {
-        animationId = requestAnimationFrame(gameLoop);
-    }
+    // Always continue the game loop for gamepad support in menus
+    animationId = requestAnimationFrame(gameLoop);
 }
 
 function startGame() {
@@ -886,6 +941,7 @@ function gameComplete() {
     gameState = 'victory';
     document.getElementById('victory-score').textContent = score;
     showScreen('victory-screen');
+    setTimeout(() => initializeMenuSelection('victory-screen'), 150);
     stopBackgroundMusic();
     playVictorySound();
 }
@@ -906,6 +962,7 @@ function gameOver() {
     gameState = 'gameover';
     document.getElementById('final-score').textContent = score;
     showScreen('gameover-screen');
+    setTimeout(() => initializeMenuSelection('gameover-screen'), 150);
     stopBackgroundMusic();
     playGameOverSound();
 }
@@ -914,6 +971,7 @@ function victory() {
     gameState = 'victory';
     document.getElementById('victory-score').textContent = score;
     showScreen('victory-screen');
+    setTimeout(() => initializeMenuSelection('victory-screen'), 150);
     stopBackgroundMusic();
     playVictorySound();
 }
@@ -928,6 +986,9 @@ function showScreen(screenId) {
 function returnToMenu() {
     gameState = 'start';
     showScreen('start-screen');
+
+    // Start game loop immediately for gamepad support
+    gameLoop(performance.now());
 }
 
 // ============================================
@@ -964,9 +1025,15 @@ document.getElementById('restart-victory-btn').addEventListener('click', startGa
 document.getElementById('menu-victory-btn').addEventListener('click', returnToMenu);
 
 // ============================================
+
+// Start game loop immediately for menu gamepad support
+gameLoop(performance.now());
 // INITIALIZE
 // ============================================
 showScreen('start-screen');
+
+// Start game loop immediately for gamepad support
+gameLoop(performance.now());
 
 // ============================================
 // MOBILE TOUCH CONTROLS
@@ -1055,11 +1122,11 @@ function addCombo() {
     // Play combo sound
     if (comboMultiplier >= 3) {
         playSound(800 + (comboMultiplier * 100), 0.15, 'square', 0.2);
-    
-    // Check for achievements
-    checkAchievements();
-    checkAchievements();
-    console.log('[COMBO]', comboCount, 'x' + comboMultiplier);
+
+        // Check for achievements
+        checkAchievements();
+        checkAchievements();
+        console.log('[COMBO]', comboCount, 'x' + comboMultiplier);
     }
 }
 
@@ -1078,10 +1145,6 @@ function updateCombo(deltaTime) {
     }
 }
 
-// ============================================
-// SCREEN SHAKE SYSTEM
-// ============================================
-let cameraShake = 0;
 
 function screenShake(intensity) {
     cameraShake = intensity;
@@ -1193,30 +1256,6 @@ function checkAchievements() {
 // ============================================
 // GAMEPAD SUPPORT
 // ============================================
-let gamepadConnected = false;
-let gamepad = null;
-let gamepadButtonsPressed = {};
-
-// Gamepad button mapping (standard layout)
-const GAMEPAD_BUTTONS = {
-    A: 0,        // Jump
-    B: 1,        // Shoot
-    X: 2,
-    Y: 3,
-    LB: 4,
-    RB: 5,
-    LT: 6,
-    RT: 7,
-    SELECT: 8,
-    START: 9,    // Pause
-    L_STICK: 10,
-    R_STICK: 11,
-    DPAD_UP: 12,
-    DPAD_DOWN: 13,
-    DPAD_LEFT: 14,
-    DPAD_RIGHT: 15
-};
-
 window.addEventListener('gamepadconnected', (e) => {
     console.log('Gamepad connected:', e.gamepad.id);
     gamepadConnected = true;
@@ -1238,27 +1277,47 @@ function showGamepadIndicator() {
     }
 }
 
-function hideGamepadIndicator() {
-    const indicator = document.getElementById('gamepad-indicator');
-    if (indicator) {
-        indicator.style.display = 'none';
-    }
-}
-
 function updateGamepad() {
-    if (!gamepadConnected) return;
-
-    // Get the latest gamepad state
+    // Always check for gamepads (active polling for detection)
     const gamepads = navigator.getGamepads();
-    gamepad = gamepads[0] || gamepads[1] || gamepads[2] || gamepads[3];
+    const detectedGamepad = gamepads[0] || gamepads[1] || gamepads[2] || gamepads[3];
 
-    if (!gamepad) return;
+    // Auto-detect gamepad if connected but not yet registered
+    if (detectedGamepad && !gamepadConnected) {
+        console.log('Gamepad auto-detected:', detectedGamepad.id);
+        gamepadConnected = true;
+        gamepad = detectedGamepad;
+        showGamepadIndicator();
+    }
+
+    if (!gamepadConnected || !detectedGamepad) return;
+
+    // Update gamepad reference
+    gamepad = detectedGamepad;
+
+    // Start button - works in ALL states
+    if (gamepad.buttons[GAMEPAD_BUTTONS.START]?.pressed) {
+        if (!gamepadButtonsPressed['pause']) {
+            if (gameState === 'playing') {
+                pauseGame();
+            } else if (gameState === 'paused') {
+                resumeGame();
+            } else if (gameState === 'start') {
+                startGame();
+            }
+            gamepadButtonsPressed['pause'] = true;
+        }
+    } else {
+        gamepadButtonsPressed['pause'] = false;
+    }
+
+    // Only process movement buttons during gameplay
+    if (gameState !== 'playing') return;
 
     // Left stick / D-Pad for movement
-    const axisX = gamepad.axes[0]; // Left stick X axis
+    const axisX = gamepad.axes[0];
     const threshold = 0.3;
 
-    // Simulate keyboard keys for gamepad input
     if (axisX < -threshold || gamepad.buttons[GAMEPAD_BUTTONS.DPAD_LEFT]?.pressed) {
         keys['ArrowLeft'] = true;
         keys['ArrowRight'] = false;
@@ -1290,24 +1349,6 @@ function updateGamepad() {
     } else {
         gamepadButtonsPressed['shoot'] = false;
     }
-
-    // Start button for pause
-    if (gamepad.buttons[GAMEPAD_BUTTONS.START]?.pressed) {
-        if (!gamepadButtonsPressed['pause']) {
-            if (gameState === 'playing') {
-                pauseGame();
-            } else if (gameState === 'paused') {
-            } else if (gameState === 'start') {
-                startGame();
-                resumeGame();
-            } else if (gameState === 'start') {
-                startGame();
-            }
-            gamepadButtonsPressed['pause'] = true;
-        }
-    } else {
-        gamepadButtonsPressed['pause'] = false;
-    }
 }
 
 function vibrateGamepad(duration = 200, intensity = 1.0) {
@@ -1321,6 +1362,14 @@ function vibrateGamepad(duration = 200, intensity = 1.0) {
     });
 }
 
+
+function hideGamepadIndicator() {
+    const indicator = document.getElementById('gamepad-indicator');
+    if (indicator) {
+        indicator.style.display = 'none';
+
+    }
+}
 // ============================================
 // GAMEPAD MENU NAVIGATION SYSTEM
 // ============================================
@@ -1330,15 +1379,20 @@ let selectedButtonIndex = 0;
 function getMenuButtons(screen) {
     const buttons = [];
     const screenEl = document.getElementById(screen);
-    if (!screenEl) return buttons;
-    
+    if (!screenEl) {
+        console.log('[MENU BUTTONS] Screen not found:', screen);
+        return buttons;
+    }
+
     const btnElements = screenEl.querySelectorAll('button.game-btn');
+    console.log('[MENU BUTTONS] Found', btnElements.length, 'buttons in', screen);
     btnElements.forEach((btn, index) => {
         if (btn.offsetParent !== null) { // visible
             buttons.push({
                 element: btn,
                 index: index
             });
+            console.log('[MENU BUTTONS] Added button:', btn.textContent, 'at index', index);
         }
     });
     return buttons;
@@ -1349,7 +1403,7 @@ function updateMenuSelection() {
     document.querySelectorAll('.game-btn').forEach(btn => {
         btn.classList.remove('gamepad-selected');
     });
-    
+
     // Highlight current
     if (menuButtons.length > 0 && menuButtons[selectedButtonIndex]) {
         menuButtons[selectedButtonIndex].element.classList.add('gamepad-selected');
@@ -1357,25 +1411,38 @@ function updateMenuSelection() {
 }
 
 function updateMenuNavigation() {
-    if (!gamepadConnected || !gamepad) return;
-    
+    console.log('[MENU NAV] Called! gamepadConnected:', gamepadConnected, 'gameState:', gameState);
+
+    // Gamepad detection is now handled in updateGamepad()
+    if (!gamepadConnected) return;
+
+    // Get fresh gamepad state
+    const gamepads = navigator.getGamepads();
+    gamepad = gamepads[0] || gamepads[1] || gamepads[2] || gamepads[3];
+
+    if (!gamepad) return;
+
     // Only navigate in menu screens
     if (gameState === 'playing') return;
-    
+
     // Get current screen buttons
     let currentScreen = 'start-screen';
     if (gameState === 'paused') currentScreen = 'pause-screen';
     else if (gameState === 'gameover') currentScreen = 'gameover-screen';
     else if (gameState === 'victory') currentScreen = 'victory-screen';
-    
+
+    console.log('[MENU NAV] Current state:', gameState, 'Screen:', currentScreen);
     menuButtons = getMenuButtons(currentScreen);
-    
-    if (menuButtons.length === 0) return;
-    
+
+    if (menuButtons.length === 0) {
+        console.log('[MENU NAV] No buttons found!');
+        return;
+    }
+
     // D-Pad / Left Stick Navigation
     const axisY = gamepad.axes[1]; // Vertical axis
     const threshold = 0.5;
-    
+
     if ((axisY < -threshold || gamepad.buttons[GAMEPAD_BUTTONS.DPAD_UP]?.pressed) && !gamepadButtonsPressed['up']) {
         selectedButtonIndex = Math.max(0, selectedButtonIndex - 1);
         updateMenuSelection();
@@ -1384,7 +1451,7 @@ function updateMenuNavigation() {
     } else if (!gamepad.buttons[GAMEPAD_BUTTONS.DPAD_UP]?.pressed && Math.abs(axisY) < threshold) {
         gamepadButtonsPressed['up'] = false;
     }
-    
+
     if ((axisY > threshold || gamepad.buttons[GAMEPAD_BUTTONS.DPAD_DOWN]?.pressed) && !gamepadButtonsPressed['down']) {
         selectedButtonIndex = Math.min(menuButtons.length - 1, selectedButtonIndex + 1);
         updateMenuSelection();
@@ -1393,18 +1460,22 @@ function updateMenuNavigation() {
     } else if (!gamepad.buttons[GAMEPAD_BUTTONS.DPAD_DOWN]?.pressed && Math.abs(axisY) < threshold) {
         gamepadButtonsPressed['down'] = false;
     }
-    
+
     // A button to confirm
     if (gamepad.buttons[GAMEPAD_BUTTONS.A]?.pressed && !gamepadButtonsPressed['confirm']) {
+        console.log('[GAMEPAD MENU] A pressed! State:', gameState, 'Buttons found:', menuButtons.length, 'Selected index:', selectedButtonIndex);
         if (menuButtons[selectedButtonIndex]) {
+            console.log('[GAMEPAD MENU] Clicking button:', menuButtons[selectedButtonIndex].element);
             menuButtons[selectedButtonIndex].element.click();
             playSound(600, 0.1, 'sine', 0.2);
+        } else {
+            console.log('[GAMEPAD MENU] ERROR: No button at index', selectedButtonIndex);
         }
         gamepadButtonsPressed['confirm'] = true;
     } else if (!gamepad.buttons[GAMEPAD_BUTTONS.A]?.pressed) {
         gamepadButtonsPressed['confirm'] = false;
     }
-    
+
     // B button to go back (return to menu from pause/gameover)
     if (gamepad.buttons[GAMEPAD_BUTTONS.B]?.pressed && !gamepadButtonsPressed['back']) {
         if (gameState === 'paused') {
@@ -1414,7 +1485,7 @@ function updateMenuNavigation() {
     } else if (!gamepad.buttons[GAMEPAD_BUTTONS.B]?.pressed) {
         gamepadButtonsPressed['back'] = false;
     }
-    
+
     // Update highlights
     updateMenuSelection();
 }
@@ -1428,3 +1499,7 @@ function initializeMenuSelection(screenId) {
 
 // Call when showing screens
 const originalShowScreen = typeof showScreen !== 'undefined' ? showScreen : null;
+// Initialize start screen on load
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => initializeMenuSelection('start-screen'), 200);
+});
