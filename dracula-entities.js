@@ -701,7 +701,7 @@ class CatGolem extends Enemy {
         super(x, y, 'catgolem');
         this.width = 100;
         this.height = 120;
-        this.velocityX = 0.5; // Moves slowly
+        this.velocityX = 1.5; // Moves faster
 
         // Boss stats
         this.maxHP = 10;
@@ -719,6 +719,12 @@ class CatGolem extends Enemy {
         // Attack properties
         this.attackRange = 100; // Attack radius
         this.attackDamage = 1;
+
+        // Jump system
+        this.onGround = true;
+        this.jumpCooldown = 0;
+        this.jumpCooldownTime = 2000; // 2 seconds between jumps
+        this.canJump = true;
     }
 
     takeDamage(damage = 1) {
@@ -785,11 +791,35 @@ class CatGolem extends Enemy {
         if (this.y + this.height >= 500) { // FLOOR_Y
             this.y = 500 - this.height;
             this.velocityY = 0;
+            this.onGround = true;
+        } else {
+            this.onGround = false;
         }
 
         // Turn around at edges
         if (this.x < 0 || this.x > canvas.width - this.width) {
             this.direction *= -1;
+        }
+
+        // Jump system
+        if (this.jumpCooldown > 0) {
+            this.jumpCooldown -= deltaTime;
+        }
+
+        // Random jump when on ground and cooldown expired
+        if (this.onGround && this.jumpCooldown <= 0 && this.canJump) {
+            // 30% chance to jump each time cooldown expires
+            if (Math.random() < 0.3) {
+                this.velocityY = -12; // Jump force
+                this.onGround = false;
+                this.jumpCooldown = this.jumpCooldownTime;
+
+                // Jump sound
+                playSound(250, 0.2, 'square', 0.2);
+            } else {
+                // Reset cooldown for next attempt
+                this.jumpCooldown = 500; // Try again in 0.5 seconds
+            }
         }
 
         // Animation
