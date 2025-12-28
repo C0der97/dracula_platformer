@@ -307,6 +307,11 @@ class Enemy {
 
         // Add combo
         addCombo();
+
+        // Firebase Analytics: Track enemy defeat
+        if (window.GameAnalytics) {
+            GameAnalytics.logEnemyDefeated(this.type);
+        }
     }
 
     draw() {
@@ -764,6 +769,11 @@ class CatGolem extends Enemy {
         playVictorySound();
         score += 1000 * comboMultiplier;
         updateHUD();
+
+        // Firebase Analytics: Track boss defeat
+        if (window.GameAnalytics) {
+            GameAnalytics.logEnemyDefeated('catgolem_boss');
+        }
     }
 
     attack() {

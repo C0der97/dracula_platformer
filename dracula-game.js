@@ -918,6 +918,11 @@ function startGame() {
     lastTime = performance.now();
     startBackgroundMusic();
     gameLoop(lastTime);
+
+    // Firebase Analytics: Track game start
+    if (window.GameAnalytics) {
+        GameAnalytics.logGameStart();
+    }
 }
 
 function nextLevel() {
@@ -944,6 +949,11 @@ function gameComplete() {
     setTimeout(() => initializeMenuSelection('victory-screen'), 150);
     stopBackgroundMusic();
     playVictorySound();
+
+    // Firebase Analytics: Track victory
+    if (window.GameAnalytics) {
+        GameAnalytics.logGameEnd(score, 'victory');
+    }
 }
 
 function pauseGame() {
@@ -965,6 +975,11 @@ function gameOver() {
     setTimeout(() => initializeMenuSelection('gameover-screen'), 150);
     stopBackgroundMusic();
     playGameOverSound();
+
+    // Firebase Analytics: Track game over
+    if (window.GameAnalytics) {
+        GameAnalytics.logGameEnd(score, 'game_over');
+    }
 }
 
 function victory() {
@@ -1210,6 +1225,11 @@ function unlockAchievement(achievementKey) {
         achievements[achievementKey].unlocked = true;
         saveAchievements();
         showAchievementNotification(achievements[achievementKey]);
+
+        // Firebase Analytics: Track achievement unlock
+        if (window.GameAnalytics) {
+            GameAnalytics.logAchievementUnlocked(achievementKey);
+        }
     }
 }
 
